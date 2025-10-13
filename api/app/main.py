@@ -11,6 +11,8 @@ from sqlalchemy import select
 from datetime import datetime, timezone
 from .database import engine, Base, get_db
 from . import models, schemas
+from .search import index_book, search_books #Import ElasticSearch Functions
+from .search import index_rental
 
 
 app = FastAPI(title="Book&Ride API", version="0.1.0")
@@ -58,15 +60,12 @@ def list_books(
     db: Session = Depends(get_db),
 ):
     stmt = select(models.Book)
-    if q:
-        like = f"%{q}%"
-        stmt = stmt.where(
-            (models.Book.title.ilike(like)) | (models.Book.author.ilike(like))
-        )
-    stmt = stmt.order_by(models.Book.id.asc())
-    rows = db.execute(stmt).scalars().all()
-    return rows
-
+    if q:  # If a search query is provided, use Elasticsearch
+        return search_books(q)
+    else:
+        stmt = select(models.Book).order_by(models.Book.id.asc())
+        rows = db.execute(stmt).scalars().all()
+        return rows
 
 # Create book
 @app.post("/books", response_model=schemas.BookOut, status_code=status.HTTP_201_CREATED)
@@ -75,6 +74,9 @@ def create_book(payload: schemas.BookCreate, db: Session = Depends(get_db)):
     db.add(book)
     db.commit()
     db.refresh(book)
+
+    # Index in Elasticsearch
+    index_book(book)
     return book
 
 # --- Update book ---
@@ -121,15 +123,11 @@ def calculate_price(minutes: int) -> float:
 @app.post("/rentals/start", response_model=schemas.RentalStartOut, status_code=status.HTTP_201_CREATED)
 def start_rental(
     payload: schemas.RentalStartIn,
-    user = Depends(verify_api_key),     # <-- protect with API key
+    user = Depends(verify_api_key),
     db: Session = Depends(get_db),
     x_user_id: int | None = Header(default=None, alias="X-User-Id"),
 ):
-    """
-    Start a rental.
-    - user_id is taken from header `X-User-Id` if present; otherwise from body; otherwise defaults to 1 (lab).
-    """
-    user_id = x_user_id or payload.user_id or 1  # simple lab-friendly fallback
+    user_id = x_user_id or payload.user_id or 1
     now = datetime.now(timezone.utc)
 
     rental = models.Rental(
@@ -144,7 +142,19 @@ def start_rental(
     db.commit()
     db.refresh(rental)
 
+    # Index rental in Elasticsearch
+    index_rental({
+        "rental_id": rental.id,
+        "user_id": rental.user_id,
+        "bike_id": rental.bike_id,
+        "started_at": rental.started_at.isoformat(),
+        "stopped_at": None,
+        "total_minutes": 0,
+        "price_eur": 0.0
+    })
+
     return schemas.RentalStartOut(rental_id=rental.id, started_at=rental.started_at)
+
 
 def _to_aware_utc(dt: datetime) -> datetime:
     if dt is None:
@@ -172,6 +182,19 @@ def stop_rental(payload: schemas.RentalStopIn, user = Depends(verify_api_key), d
     r.stopped_at = now
     r.total_minutes = minutes
     r.price_eur = price
-    db.add(r); db.commit(); db.refresh(r)
+    db.add(r)
+    db.commit()
+    db.refresh(r)
+
+    index_rental({
+        "rental_id": r.id,
+        "user_id": r.user_id,
+        "bike_id": r.bike_id,
+        "started_at": r.started_at.isoformat(),
+        "stopped_at": r.stopped_at.isoformat(),
+        "total_minutes": r.total_minutes,
+        "price_eur": r.price_eur
+    })
 
     return {"duration_min": minutes, "price_eur": price}
+
