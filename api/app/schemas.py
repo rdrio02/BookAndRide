@@ -20,19 +20,17 @@ class BookUpdate(BaseModel):
 
 class BookOut(BookBase):
     id: int
-
-
     model_config = {"from_attributes": True}
 
 
 class RentalStartIn(BaseModel):
     bike_id: str = Field(min_length=3, max_length=64)
-    # Optional: allow passing user_id in body for quick lab usage
     user_id: int | None = None
 
 class RentalStartOut(BaseModel):
     rental_id: int
     started_at: datetime
+    model_config = {"from_attributes": True}
 
 class RentalStopIn(BaseModel):
     rental_id: int

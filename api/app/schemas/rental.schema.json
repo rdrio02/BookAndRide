@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/rental.schema.json",
+  "title": "Rental",
+  "type": "object",
+  "required": ["id", "user_id", "bike_id", "started_at", "price_eur"],
+  "properties": {
+    "id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Unique identifier for the rental"
+    },
+    "user_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "User who initiated the rental"
+    },
+    "bike_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Identifier of the rented bike"
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Rental start time in ISO-8601 format (UTC)"
+    },
+    "stopped_at": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Rental stop time (nullable until finished)"
+    },
+    "total_minutes": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total duration of the rental in minutes"
+    },
+    "price_eur": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Final price of the rental in euros"
+    }
+  },
+  "additionalProperties": false
+}
