@@ -17,9 +17,11 @@ def parse_body(raw: bytes, content_type: str, schema: dict, model: type[BaseMode
     elif content_type == "application/xml":
         try:
             data = xmltodict.parse(raw)
-            if "book" in data:
-                data = data["book"]
-
+            
+            # Unwrap the first root element (e.g., <rental> or <book>)
+            if len(data) == 1:
+                data = next(iter(data.values()))
+            
             # Convert types to match your JSON Schema
             for key, prop in schema.get("properties", {}).items():
                 if key not in data:
@@ -47,7 +49,6 @@ def parse_body(raw: bytes, content_type: str, schema: dict, model: type[BaseMode
     return model(**data).model_dump()
 
 
-
 def negotiate(accept_header: str | None) -> str:
     """Return appropriate response media type based on Accept header."""
     if not accept_header:
@@ -64,5 +65,18 @@ def render(data: dict[str, Any], accept: str) -> Response:
     """Serialize response data to JSON or XML."""
     if accept == "application/xml":
         xml = xmltodict.unparse({"book": data}, pretty=True)
+        return Response(content=xml, media_type="application/xml")
+    return JSONResponse(content=data)
+
+def render_rental(data: dict, accept: str | None = None):
+    """
+    Serialize rental data to JSON or XML based on Accept header.
+    """
+    if accept is None:
+        accept = "application/json"
+
+    if accept == "application/xml":
+        # Wrap rental in root element
+        xml = xmltodict.unparse({"rental": data}, pretty=True)
         return Response(content=xml, media_type="application/xml")
     return JSONResponse(content=data)

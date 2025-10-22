@@ -16,7 +16,7 @@ from .auth import verify_api_key
 from .database import engine, Base, get_db
 from . import models, schemas
 from .search import index_book, search_books, index_rental
-from .serialization import parse_body, negotiate, render  # <─ your helper functions
+from .serialization import parse_body, negotiate, render, render_rental
 
 # ─────────────────────────────────────────────
 # App setup
@@ -57,8 +57,8 @@ def health():
 # Load JSON Schema for validation
 # ─────────────────────────────────────────────
 BOOK_SCHEMA = json.load(open(Path(__file__).parent / "schemas" / "book.schema.json"))
-RENTAL_SCHEMA = json.load(open(Path(__file__).parent / "schemas" / "rental.schema.json"))
-
+RENTAL_START_SCHEMA = json.load(open(Path(__file__).parent / "schemas" / "rental.start.schema.json"))
+RENTAL_STOP_SCHEMA = json.load(open(Path(__file__).parent / "schemas" / "rental.stop.schema.json"))
 
 # ─────────────────────────────────────────────
 # Books endpoints (JSON + XML support)
@@ -180,19 +180,29 @@ def calculate_price(minutes: int) -> float:
     """€0.25/min with €12/day cap."""
     return min(minutes * PRICE_PER_MIN, DAILY_CAP)
 
-@app.post("/rentals/start", response_model=schemas.RentalStartOut, status_code=status.HTTP_201_CREATED)
-def start_rental(
-    payload: schemas.RentalStartIn,
-    user = Depends(verify_api_key),
+@app.post("/rentals/start", response_model=None)
+async def start_rental(
+    request: Request,
     db: Session = Depends(get_db),
     x_user_id: int | None = Header(default=None, alias="X-User-Id"),
+    user = Depends(verify_api_key),
 ):
-    user_id = x_user_id or payload.user_id or 1
+    content_type = request.headers.get("Content-Type", "").split(";")[0]
+    body = await request.body()
+
+    # Parse XML or JSON
+    data = parse_body(body, content_type, RENTAL_START_SCHEMA, schemas.RentalStartIn)
+
+    print("Received rental start data:", json.dumps(data, indent=2))
+
+    bike_id = data["bike_id"].strip()
+    user_id = data.get("user_id")
+
     now = datetime.now(timezone.utc)
 
     rental = models.Rental(
-        user_id=user_id,
-        bike_id=payload.bike_id.strip(),
+        user_id=data.get("user_id"),
+        bike_id=data["bike_id"].strip(),
         started_at=now,
         stopped_at=None,
         total_minutes=0,
@@ -202,7 +212,6 @@ def start_rental(
     db.commit()
     db.refresh(rental)
 
-    # Index in Elasticsearch
     index_rental({
         "rental_id": rental.id,
         "user_id": rental.user_id,
@@ -213,7 +222,14 @@ def start_rental(
         "price_eur": 0.0
     })
 
-    return schemas.RentalStartOut(rental_id=rental.id, started_at=rental.started_at)
+    accept = request.headers.get("Accept")
+    return render(
+        data={"rental_id": rental.id, "started_at": rental.started_at.isoformat()},
+        accept=accept
+    )
+
+
+
 
 
 def _to_aware_utc(dt: datetime) -> datetime:
@@ -223,13 +239,21 @@ def _to_aware_utc(dt: datetime) -> datetime:
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
 
-@app.post("/rentals/stop", response_model=schemas.RentalStopOut)
-def stop_rental(payload: schemas.RentalStopIn, user = Depends(verify_api_key), db: Session = Depends(get_db)):
-    r = db.get(models.Rental, payload.rental_id)
+@app.post("/rentals/stop", response_model=None)
+async def stop_rental(request: Request, db: Session = Depends(get_db), user=Depends(verify_api_key)):
+    content_type = request.headers.get("Content-Type", "").split(";")[0]
+    body = await request.body()
+    data = parse_body(body, content_type, RENTAL_STOP_SCHEMA, schemas.RentalStopIn)
+
+    print("Received rental start data:", json.dumps(data, indent=2))
+
+    r = db.get(models.Rental, data["rental_id"])
     if not r:
         raise HTTPException(status_code=404, detail="Rental not found")
     if r.stopped_at is not None:
-        return {"duration_min": r.total_minutes, "price_eur": r.price_eur}
+        response_data = {"duration_min": r.total_minutes, "price_eur": r.price_eur}
+        accept = request.headers.get("Accept")
+        return render_rental(response_data, accept)
 
     now = datetime.now(timezone.utc)
     start = _to_aware_utc(r.started_at)
@@ -252,4 +276,5 @@ def stop_rental(payload: schemas.RentalStopIn, user = Depends(verify_api_key), d
         "price_eur": r.price_eur
     })
 
-    return {"duration_min": minutes, "price_eur": price}
+    accept = request.headers.get("Accept")
+    return render_rental({"duration_min": minutes, "price_eur": price}, accept)

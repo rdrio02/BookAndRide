@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RentalStart",
+  "description": "Schema for starting a rental",
+  "type": "object",
+  "properties": {
+    "user_id": {
+      "type": "integer",
+      "description": "ID of the user (optional, can be overridden by X-User-Id header)"
+    },
+    "bike_id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 64,
+      "description": "Identifier of the bike to rent"
+    }
+  },
+  "required": ["bike_id"],
+  "additionalProperties": false
+}
