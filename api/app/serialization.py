@@ -56,23 +56,35 @@ def parse_body(raw: bytes, content_type: str, schema: dict, model: type[BaseMode
 
 
 def negotiate(accept_header: str | None) -> str:
-    """Return appropriate response media type based on Accept header."""
-    if not accept_header:
+    if not accept_header or "*/*" in accept_header:
         return "application/json"
+
     accepts = [a.strip() for a in accept_header.split(",")]
+    if any(a.startswith("application/x-yaml") for a in accepts):
+        return "application/x-yaml"
     if any(a.startswith("application/xml") for a in accepts):
         return "application/xml"
     if any(a.startswith("application/json") for a in accepts):
         return "application/json"
+
     raise HTTPException(406, detail="Not Acceptable")
 
 
-def render(data: dict[str, Any], accept: str) -> Response:
-    """Serialize response data to JSON or XML."""
+def render(data, accept: str) -> Response:
+    """Serialize data to JSON, YAML, or XML."""
     if accept == "application/xml":
-        xml = xmltodict.unparse({"book": data}, pretty=True)
+        if isinstance(data, list):
+            xml = xmltodict.unparse({"books": {"book": data}}, pretty=True)
+        else:
+            xml = xmltodict.unparse({"book": data}, pretty=True)
         return Response(content=xml, media_type="application/xml")
+
+    if accept == "application/x-yaml":
+        yaml_str = yaml.safe_dump(data, sort_keys=False)
+        return Response(content=yaml_str, media_type="application/x-yaml")
+
     return JSONResponse(content=data)
+
 
 def render_rental(data: dict, accept: str | None = None):
     """

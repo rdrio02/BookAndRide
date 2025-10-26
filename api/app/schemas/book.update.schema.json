@@ -1,15 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/book.schema.json",
-  "title": "Book",
+  "$id": "https://example.com/book.update.schema.json",
+  "title": "BookUpdate",
   "type": "object",
-  "required": ["title", "author", "stock"],
   "properties": {
-    "id": {
-      "type": "integer",
-      "minimum": 1,
-      "description": "Unique identifier for the book"
-    },
     "title": {
       "type": "string",
       "minLength": 1,
@@ -22,7 +16,7 @@
     },
     "stock": {
       "type": "integer",
-      "description": "Books Available in Stock"
+      "description": "Books available in stock"
     }
   },
   "additionalProperties": false

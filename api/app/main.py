@@ -57,6 +57,8 @@ def health():
 # Load JSON Schema for validation
 # ─────────────────────────────────────────────
 BOOK_SCHEMA = json.load(open(Path(__file__).parent / "schemas" / "book.schema.json"))
+BOOK_UPDATE_SCHEMA = json.load(open(Path(__file__).parent / "schemas" / "book.update.schema.json"))
+
 RENTAL_START_SCHEMA = json.load(open(Path(__file__).parent / "schemas" / "rental.start.schema.json"))
 RENTAL_STOP_SCHEMA = json.load(open(Path(__file__).parent / "schemas" / "rental.stop.schema.json"))
 
@@ -65,12 +67,7 @@ RENTAL_STOP_SCHEMA = json.load(open(Path(__file__).parent / "schemas" / "rental.
 # ─────────────────────────────────────────────
 
 @app.get("/books", response_model=None)
-def list_books(
-    request: Request,
-    db: Session = Depends(get_db),
-    q: str | None = Query(default=None, description="Search in title or author"),
-):
-    """Return list of books — JSON or XML depending on Accept header."""
+def list_books(request: Request, db: Session = Depends(get_db), q: str | None = Query(default=None)):
     if q:
         results = search_books(q)
     else:
@@ -79,13 +76,7 @@ def list_books(
 
     books_data = [schemas.BookOut.model_validate(b).model_dump() for b in results]
     accept = negotiate(request.headers.get("Accept"))
-
-    if accept == "application/xml":
-        xml = xmltodict.unparse({"books": {"book": books_data}}, pretty=True)
-        return Response(content=xml, media_type="application/xml")
-
-    return JSONResponse(content=books_data)
-
+    return render(books_data, accept)
 
 
 @app.get("/books/{book_id}", response_model=None)
@@ -122,32 +113,59 @@ async def create_book(request: Request, db: Session = Depends(get_db)):
     return render(schemas.BookOut.model_validate(book).model_dump(), accept)
 
 
-@app.put("/books/{book_id}", response_model=schemas.BookOut)
-def update_book(book_id: int, payload: schemas.BookUpdate, db: Session = Depends(get_db)):
-    """Update a book (JSON only)."""
+@app.put("/books/{book_id}", response_model=None)
+async def update_book(book_id: int, request: Request, db: Session = Depends(get_db)):
+    """Update a book — supports partial updates and JSON/XML/YAML input/output."""
+    
+    content_type = request.headers.get("Content-Type", "").split(";")[0]
+    body = await request.body()
+
+    # Parse using the partial update schema
+    data = parse_body(body, content_type, BOOK_UPDATE_SCHEMA, schemas.BookUpdate)
+
     book = db.get(models.Book, book_id)
     if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
+        raise HTTPException(404, "Book not found")
 
-    data = payload.model_dump(exclude_unset=True)
+    # Only update fields that are present in the request
     for k, v in data.items():
-        setattr(book, k, v)
+        if v is not None:
+            setattr(book, k, v)
 
     db.commit()
     db.refresh(book)
-    return book
+
+    accept = negotiate(request.headers.get("Accept"))
+    return render(schemas.BookOut.model_validate(book).model_dump(), accept)
 
 
-@app.delete("/books/{book_id}", status_code=204)
-def delete_book(book_id: int, db: Session = Depends(get_db)):
-    """Delete a book."""
+
+@app.delete("/books/{book_id}", response_model=None)
+async def delete_book(book_id: int, request: Request, db: Session = Depends(get_db)):
     book = db.get(models.Book, book_id)
     if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
+        raise HTTPException(404, "Book not found")
 
     db.delete(book)
     db.commit()
-    return None
+
+    accept = negotiate(request.headers.get("Accept"))
+    return render({"detail": f"Book {book_id} deleted"}, accept)
+
+@app.delete("/books", response_model=None)
+async def delete_all_books(
+    request: Request,
+    db: Session = Depends(get_db),
+    user = Depends(verify_api_key),  # Require valid API key
+):
+    """Delete all books — supports JSON, XML, YAML output."""
+    
+    num_deleted = db.query(models.Book).delete()
+    db.commit()
+
+    accept = negotiate(request.headers.get("Accept"))
+    return render({"detail": f"Deleted {num_deleted} books"}, accept)
+
 
 # ─────────────────────────────────────────────
 # Converter endpoint (JSON ⇄ XML)
