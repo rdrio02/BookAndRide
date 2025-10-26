@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from jsonschema import validate, ValidationError
 from pydantic import BaseModel
 from typing import Any
+import yaml
 
 
 def parse_body(raw: bytes, content_type: str, schema: dict, model: type[BaseModel]) -> dict:
@@ -36,6 +37,11 @@ def parse_body(raw: bytes, content_type: str, schema: dict, model: type[BaseMode
                     data[key] = val == "true"
         except Exception as e:
             raise HTTPException(422, detail={"error": "invalid_xml", "message": str(e)})
+    elif content_type == "application/x-yaml":
+        try:
+            data = yaml.safe_load(raw)
+        except yaml.YAMLError as e:
+            raise HTTPException(422, detail={"error": "invalid_yaml", "message": str(e)})    
     else:
         raise HTTPException(415, detail="Unsupported Media Type")
 
@@ -79,4 +85,9 @@ def render_rental(data: dict, accept: str | None = None):
         # Wrap rental in root element
         xml = xmltodict.unparse({"rental": data}, pretty=True)
         return Response(content=xml, media_type="application/xml")
+    
+    if accept == "application/x-yaml":
+        yaml_str = yaml.safe_dump(data, sort_keys=False)
+        return Response(content=yaml_str, media_type="application/x-yaml")
+    
     return JSONResponse(content=data)
