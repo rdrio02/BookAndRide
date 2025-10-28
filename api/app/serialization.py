@@ -70,7 +70,7 @@ def negotiate(accept_header: str | None) -> str:
     raise HTTPException(406, detail="Not Acceptable")
 
 
-def render(data, accept: str) -> Response:
+def render_book(data, accept: str) -> Response:
     """Serialize data to JSON, YAML, or XML."""
     if accept == "application/xml":
         if isinstance(data, list):

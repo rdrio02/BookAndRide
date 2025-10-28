@@ -16,7 +16,7 @@ from .auth import verify_api_key
 from .database import engine, Base, get_db
 from . import models, schemas
 from .search import index_book, search_books, index_rental
-from .serialization import parse_body, negotiate, render, render_rental
+from .serialization import parse_body, negotiate, render_book, render_rental
 
 # ─────────────────────────────────────────────
 # App setup
@@ -76,7 +76,7 @@ def list_books(request: Request, db: Session = Depends(get_db), q: str | None = 
 
     books_data = [schemas.BookOut.model_validate(b).model_dump() for b in results]
     accept = negotiate(request.headers.get("Accept"))
-    return render(books_data, accept)
+    return render_book(books_data, accept)
 
 
 @app.get("/books/{book_id}", response_model=None)
@@ -87,7 +87,7 @@ def get_book(book_id: int, request: Request, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Book not found")
 
     accept = negotiate(request.headers.get("Accept"))
-    return render(schemas.BookOut.model_validate(book).model_dump(), accept)
+    return render_book(schemas.BookOut.model_validate(book).model_dump(), accept)
 
 
 @app.post("/books", status_code=status.HTTP_201_CREATED)
@@ -110,7 +110,7 @@ async def create_book(request: Request, db: Session = Depends(get_db)):
 
     # Serialize response
     accept = negotiate(request.headers.get("Accept"))
-    return render(schemas.BookOut.model_validate(book).model_dump(), accept)
+    return render_book(schemas.BookOut.model_validate(book).model_dump(), accept)
 
 
 @app.put("/books/{book_id}", response_model=None)
@@ -136,7 +136,7 @@ async def update_book(book_id: int, request: Request, db: Session = Depends(get_
     db.refresh(book)
 
     accept = negotiate(request.headers.get("Accept"))
-    return render(schemas.BookOut.model_validate(book).model_dump(), accept)
+    return render_book(schemas.BookOut.model_validate(book).model_dump(), accept)
 
 
 
@@ -150,7 +150,7 @@ async def delete_book(book_id: int, request: Request, db: Session = Depends(get_
     db.commit()
 
     accept = negotiate(request.headers.get("Accept"))
-    return render({"detail": f"Book {book_id} deleted"}, accept)
+    return render_book({"detail": f"Book {book_id} deleted"}, accept)
 
 @app.delete("/books", response_model=None)
 async def delete_all_books(
@@ -164,7 +164,7 @@ async def delete_all_books(
     db.commit()
 
     accept = negotiate(request.headers.get("Accept"))
-    return render({"detail": f"Deleted {num_deleted} books"}, accept)
+    return render_book({"detail": f"Deleted {num_deleted} books"}, accept)
 
 
 # ─────────────────────────────────────────────
