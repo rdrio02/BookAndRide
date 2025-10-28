@@ -48,14 +48,9 @@ rdrio@Desktop-RDRIO:~/API-Small-Project$ tree
 docker-compose up --build -d
 ```
 
-3. Verify containers are running:
-
-```bash
-docker ps
-```
-
-4. Access the API at: `http://localhost:8000`
-5. Access Grafana at: `http://localhost:3000` (Default credentials: `admin` / `admin`)
+3. Access the API at: `http://localhost:8000`
+4. Access Grafana at: `http://localhost:3000` (Default credentials: `admin` / `admin`)
+5. Access Kibana  at: `http://localhost:5601`
 
 ---
 
