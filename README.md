@@ -1,183 +1,275 @@
-# Assessment 1 - DatOps
+# API Small Project
 
-# Description
-This Project is about making or building a API capable of storing books and rentals of bikes using FastAPI. The Project is capable of doing serialization and deserialization and also provides with data visualization using Grafana and ElasticSearch.
+## Download and Setup
 
+You can download the code from GitHub:
 
-# Get Books Data
+```bash
+git clone https://github.com/rdrio02/API-Small-Project.git
+cd API-Small-Project
+```
 
-### JSON format
+Project structure:
+
+```text
+rdrio@Desktop-RDRIO:~/API-Small-Project$ tree
+.
+├── README.md
+├── api
+│   ├── Dockerfile
+│   ├── app
+│   │   ├── auth.py
+│   │   ├── database.py
+│   │   ├── main.py
+│   │   ├── models.py
+│   │   ├── schemas
+│   │   │   ├── book.schema.json
+│   │   │   ├── book.update.schema.json
+│   │   │   ├── rental.schema.json
+│   │   │   ├── rental.start.schema.json
+│   │   │   └── rental.stop.schema.json
+│   │   ├── schemas.py
+│   │   ├── search.py
+│   │   └── serialization.py
+│   └── requirements.txt
+├── docker-compose.yml
+├── nginx
+│   └── nginx.conf
+└── prometheus
+    └── prometheus.yml
+```
+
+### Setup Instructions (5 Steps)
+
+1. Install Docker and Docker Compose if not already installed.
+2. Build and start the containers:
+
+```bash
+docker-compose up --build -d
+```
+
+3. Verify containers are running:
+
+```bash
+docker ps
+```
+
+4. Access the API at: `http://localhost:8000`
+5. Access Grafana at: `http://localhost:3000` (Default credentials: `admin` / `admin`)
+
+---
+
+## API Collection
+
+### Books
+
+**Get all books**
+
+* JSON:
+
 ```bash
 curl -H "Accept: application/json" http://localhost:8000/books
 ```
 
-### XML format
+* XML:
+
 ```bash
 curl -H "Accept: application/xml" http://localhost:8000/books
 ```
 
-### YAML format
+* YAML:
+
 ```bash
 curl -H "Accept: application/x-yaml" http://localhost:8000/books
 ```
 
-### Get Books without accept headers (returns in JSON)
+* Default (JSON):
+
 ```bash
 curl http://localhost:8000/books
 ```
 
----
+**Add a book**
 
-## ADD a Book
+* JSON:
 
-### JSON input, default output JSON
 ```bash
-curl -X POST http://localhost:8000/books   -H "Content-Type: application/json"   -d '{"title":"Dune","author":"Frank Herbert","stock":12}'
+curl -X POST http://localhost:8000/books \
+-H "Content-Type: application/json" \
+-d '{"title":"Dune","author":"Frank Herbert","stock":12}'
 ```
 
-### JSON input, explicit JSON output
+* XML:
+
 ```bash
-curl -X POST http://localhost:8000/books   -H "Content-Type: application/json"   -H "Accept: application/json"   -d '{"title":"Dune","author":"Frank Herbert","stock":12}'
+curl -X POST http://localhost:8000/books \
+-H "Content-Type: application/xml" \
+-H "Accept: application/xml" \
+-d '<?xml version="1.0"?><book><title>Dune</title><author>Frank Herbert</author><stock>12</stock></book>'
 ```
 
-### XML input, XML output
-```bash
-curl -X POST http://localhost:8000/books   -H "Content-Type: application/xml"   -H "Accept: application/xml"   -d '<?xml version="1.0" encoding="UTF-8"?>
-<book>
-<title>Dune</title>
-<author>Frank Herbert</author>
-<stock>12</stock>
-</book>'
-```
+* YAML:
 
-### YAML input, YAML output
 ```bash
-curl -X POST http://localhost:8000/books   -H "Content-Type: application/x-yaml"   -H "Accept: application/x-yaml"   -d '
-title: Dune
+curl -X POST http://localhost:8000/books \
+-H "Content-Type: application/x-yaml" \
+-H "Accept: application/x-yaml" \
+-d 'title: Dune
 author: Frank Herbert
-stock: 12
-'
+stock: 12'
 ```
 
----
+**Update a book**
 
-## Update a Book
-
-### JSON input, default JSON output
-```bash
-curl -X PUT http://localhost:8000/books/35   -H "Content-Type: application/json"   -d '{"stock": 20}'
-```
-
-### XML input, XML output
-```bash
-curl -X PUT http://localhost:8000/books/35   -H "Content-Type: application/xml"   -H "Accept: application/xml"   -d '<?xml version="1.0"?>
-<book>
-<stock>20</stock>
-</book>'
-```
-
-### YAML input, YAML output
-```bash
-curl -X PUT http://localhost:8000/books/35   -H "Content-Type: application/x-yaml"   -H "Accept: application/x-yaml"   -d '
-stock: 20
-'
-```
-
----
-
-## Delete a Book
+* JSON:
 
 ```bash
-curl -X DELETE http://localhost:8000/books/35
+curl -X PUT http://localhost:8000/books/35 \
+-H "Content-Type: application/json" \
+-d '{"stock": 20}'
 ```
 
-### JSON
+* XML:
+
+```bash
+curl -X PUT http://localhost:8000/books/35 \
+-H "Content-Type: application/xml" \
+-H "Accept: application/xml" \
+-d '<?xml version="1.0"?><book><stock>20</stock></book>'
+```
+
+* YAML:
+
+```bash
+curl -X PUT http://localhost:8000/books/35 \
+-H "Content-Type: application/x-yaml" \
+-H "Accept: application/x-yaml" \
+-d 'stock: 20'
+```
+
+**Delete a book**
+
+* Single book (JSON):
+
 ```bash
 curl -X DELETE http://localhost:8000/books/39 -H "Accept: application/json"
 ```
 
-### XML
+* All books (requires API key):
+
 ```bash
-curl -X DELETE http://localhost:8000/books/39 -H "Accept: application/xml"
+curl -X DELETE http://localhost:8000/books \
+-H "X-API-Key: admin-key-456" \
+-H "Accept: application/json"
 ```
 
-### YAML
+### Rentals
+
+**Start rental**
+
+* JSON:
+
 ```bash
-curl -X DELETE http://localhost:8000/books/39 -H "Accept: application/x-yaml"
+curl -X POST http://localhost:8000/rentals/start \
+-H "Content-Type: application/json" \
+-H "Accept: application/json" \
+-H "X-API-Key: dev-key-123" \
+-d '{"bike_id": "BIKE-101","user_id": 1}'
+```
+
+* XML:
+
+```bash
+curl -X POST http://localhost:8000/rentals/start \
+-H "Content-Type: application/xml" \
+-H "Accept: application/xml" \
+-H "X-API-Key: dev-key-123" \
+-d '<?xml version="1.0"?><rental><bike_id>BIKE-101</bike_id><user_id>1</user_id></rental>'
+```
+
+* YAML:
+
+```bash
+curl -X POST http://localhost:8000/rentals/start \
+-H "Content-Type: application/x-yaml" \
+-H "Accept: application/x-yaml" \
+-H "X-API-Key: dev-key-123" \
+-d 'bike_id: BIKE-101
+user_id: 1'
+```
+
+**Stop rental**
+
+* JSON:
+
+```bash
+curl -X POST http://localhost:8000/rentals/stop \
+-H "Content-Type: application/json" \
+-H "Accept: application/json" \
+-H "X-API-Key: dev-key-123" \
+-d '{"rental_id": 15}'
+```
+
+* XML:
+
+```bash
+curl -X POST http://localhost:8000/rentals/stop \
+-H "Content-Type: application/xml" \
+-H "Accept: application/xml" \
+-H "X-API-Key: dev-key-123" \
+-d '<?xml version="1.0"?><rental><rental_id>16</rental_id></rental>'
+```
+
+* YAML:
+
+```bash
+curl -X POST http://localhost:8000/rentals/stop \
+-H "Content-Type: application/x-yaml" \
+-H "Accept: application/x-yaml" \
+-H "X-API-Key: dev-key-123" \
+-d 'rental_id: 15'
 ```
 
 ---
 
-## Delete ALL (Requires API Key)
+## Demo Script (~2 Minutes)
 
-### JSON
+**1. List all books (JSON):**
+
 ```bash
-curl -X DELETE http://localhost:8000/books   -H "X-API-Key: admin-key-456"   -H "Accept: application/json"
+curl -H "Accept: application/json" http://localhost:8000/books
 ```
 
-### XML
+**2. Add a new book:**
+
 ```bash
-curl -X DELETE http://localhost:8000/books   -H "X-API-Key: admin-key-456"   -H "Accept: application/xml"
+curl -X POST http://localhost:8000/books \
+-H "Content-Type: application/json" \
+-d '{"title":"Dune","author":"Frank Herbert","stock":12}'
 ```
 
-### YAML
+**3. Update a book's stock:**
+
 ```bash
-curl -X DELETE http://localhost:8000/books   -H "X-API-Key: admin-key-456"   -H "Accept: application/x-yaml"
+curl -X PUT http://localhost:8000/books/1 \
+-H "Content-Type: application/json" \
+-d '{"stock": 20}'
 ```
 
----
+**4. Start a bike rental:**
 
-# Rentals
-
-## Start Rentals
-
-### JSON
 ```bash
-curl -X POST http://localhost:8000/rentals/start   -H "Content-Type: application/json"   -H "Accept: application/json"   -H "X-API-Key: dev-key-123"   -d '{
-        "bike_id": "BIKE-101",
-        "user_id": 1
-      }'
+curl -X POST http://localhost:8000/rentals/start \
+-H "Content-Type: application/json" \
+-H "X-API-Key: dev-key-123" \
+-d '{"bike_id": "BIKE-101","user_id": 1}'
 ```
 
-### XML
+**5. Stop the bike rental:**
+
 ```bash
-curl -X POST http://localhost:8000/rentals/start   -H "Content-Type: application/xml"   -H "Accept: application/xml"   -H "X-API-Key: dev-key-123"   -d '<?xml version="1.0"?>
-<rental>
-<bike_id>BIKE-101</bike_id>
-<user_id>1</user_id>
-</rental>'
-```
-
-### YAML
-```bash
-curl -X POST http://localhost:8000/rentals/start   -H "Content-Type: application/x-yaml"   -H "Accept: application/x-yaml"   -H "X-API-Key: dev-key-123"   -d '
-bike_id: BIKE-101
-user_id: 1
-'
-```
-
----
-
-## Stop Rentals
-
-### JSON
-```bash
-curl -X POST http://localhost:8000/rentals/stop   -H "Content-Type: application/json"   -H "Accept: application/json"   -H "X-API-Key: dev-key-123"   -d '{
-        "rental_id": 15
-      }'
-```
-
-### XML
-```bash
-curl -X POST http://localhost:8000/rentals/stop   -H "Content-Type: application/xml"   -H "Accept: application/xml"   -H "X-API-Key: dev-key-123"   -d '<?xml version="1.0"?>
-<rental>
-<rental_id>16</rental_id>
-</rental>'
-```
-
-### YAML
-```bash
-curl -X POST http://localhost:8000/rentals/stop   -H "Content-Type: application/x-yaml"   -H "Accept: application/x-yaml"   -H "X-API-Key: dev-key-123"   -d '
-rental_id: 15
-'
+curl -X POST http://localhost:8000/rentals/stop \
+-H "Content-Type: application/json" \
+-H "X-API-Key: dev-key-123" \
+-d '{"rental_id": 1}'
 ```
