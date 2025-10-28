@@ -1,4 +1,7 @@
-# API-Small-Project
+# Assessment 1 - DatOps
+
+# Description
+This Project is about making or building a API capable of storing books and rentals of bikes using FastAPI. The Project is capable of doing serialization and deserialization and also provides with data visualization using Grafana and ElasticSearch.
 
 
 # Get Books Data
