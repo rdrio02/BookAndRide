@@ -1,270 +1,140 @@
-# API Small Project
+# DEVOP2 Assessment 1
 
-## Download and Setup
+## Description
 
-You can download the code from GitHub:
+This project is based on the one I handed in for DatOp2-Assessment1. The goal of this extended version was to implement a **complete release management workflow** including **versioning, tagging, rolling releases, environment branches, hotfixes, and rollback strategies**.
 
-```bash
-git clone https://github.com/rdrio02/API-Small-Project.git
-cd API-Small-Project
-```
+Key highlights of the project:
 
-Project structure:
-
-```text
-rdrio@Desktop-RDRIO:~/API-Small-Project$ tree
-.
-├── README.md
-├── api
-│   ├── Dockerfile
-│   ├── app
-│   │   ├── auth.py
-│   │   ├── database.py
-│   │   ├── main.py
-│   │   ├── models.py
-│   │   ├── schemas
-│   │   │   ├── book.schema.json
-│   │   │   ├── book.update.schema.json
-│   │   │   ├── rental.schema.json
-│   │   │   ├── rental.start.schema.json
-│   │   │   └── rental.stop.schema.json
-│   │   ├── schemas.py
-│   │   ├── search.py
-│   │   └── serialization.py
-│   └── requirements.txt
-├── docker-compose.yml
-├── nginx
-│   └── nginx.conf
-└── prometheus
-    └── prometheus.yml
-```
- 
-### Setup Instructions (5 Steps)
-
-1. Install Docker and Docker Compose if not already installed.
-2. Build and start the containers:
-
-```bash
-docker-compose up --build -d
-```
-
-3. Access the API at: `http://localhost:8000`
-4. Access Grafana at: `http://localhost:3000` (Default credentials: `admin` / `admin`)
-5. Access Kibana  at: `http://localhost:5601`
+* Initial release management using Git tags.
+* Promotion of releases through `dev`, `staging`, and `main` (production) branches.
+* Hotfix workflow for quickly addressing critical bugs.
+* Semantic versioning for tracking patches, minor, and major changes.
 
 ---
 
-## API Collection
+# Full Git Release and Hotfix Guide
 
-### Books
+This markdown file summarizes all steps from initial release, tagging, environment merges, rollback, and hotfixes.
 
-**Get all books**
+---
 
-* JSON:
+## 1️. Initial Release
 
 ```bash
-curl -H "Accept: application/json" http://localhost:8000/books
+# Make sure all changes are committed
+git add .
+git commit -m "Initial release v1.0.0"
+
+# Create a tag for version 1.0.0
+git tag -a v1.0.0 -m "Version 1.0.0"
+
+# Push tag to GitHub
+git push origin v1.0.0
 ```
 
-* XML:
+### Visualize Tags
 
 ```bash
-curl -H "Accept: application/xml" http://localhost:8000/books
-```
-
-* YAML:
-
-```bash
-curl -H "Accept: application/x-yaml" http://localhost:8000/books
-```
-
-* Default (JSON):
-
-```bash
-curl http://localhost:8000/books
-```
-
-**Add a book**
-
-* JSON:
-
-```bash
-curl -X POST http://localhost:8000/books \
--H "Content-Type: application/json" \
--d '{"title":"Dune","author":"Frank Herbert","stock":12}'
-```
-
-* XML:
-
-```bash
-curl -X POST http://localhost:8000/books \
--H "Content-Type: application/xml" \
--H "Accept: application/xml" \
--d '<?xml version="1.0"?><book><title>Dune</title><author>Frank Herbert</author><stock>12</stock></book>'
-```
-
-* YAML:
-
-```bash
-curl -X POST http://localhost:8000/books \
--H "Content-Type: application/x-yaml" \
--H "Accept: application/x-yaml" \
--d 'title: Dune
-author: Frank Herbert
-stock: 12'
-```
-
-**Update a book**
-
-* JSON:
-
-```bash
-curl -X PUT http://localhost:8000/books/35 \
--H "Content-Type: application/json" \
--d '{"stock": 20}'
-```
-
-* XML:
-
-```bash
-curl -X PUT http://localhost:8000/books/35 \
--H "Content-Type: application/xml" \
--H "Accept: application/xml" \
--d '<?xml version="1.0"?><book><stock>20</stock></book>'
-```
-
-* YAML:
-
-```bash
-curl -X PUT http://localhost:8000/books/35 \
--H "Content-Type: application/x-yaml" \
--H "Accept: application/x-yaml" \
--d 'stock: 20'
-```
-
-**Delete a book**
-
-* Single book (JSON):
-
-```bash
-curl -X DELETE http://localhost:8000/books/39 -H "Accept: application/json"
-```
-
-* All books (requires API key):
-
-```bash
-curl -X DELETE http://localhost:8000/books \
--H "X-API-Key: admin-key-456" \
--H "Accept: application/json"
-```
-
-### Rentals
-
-**Start rental**
-
-* JSON:
-
-```bash
-curl -X POST http://localhost:8000/rentals/start \
--H "Content-Type: application/json" \
--H "Accept: application/json" \
--H "X-API-Key: dev-key-123" \
--d '{"bike_id": "BIKE-101","user_id": 1}'
-```
-
-* XML:
-
-```bash
-curl -X POST http://localhost:8000/rentals/start \
--H "Content-Type: application/xml" \
--H "Accept: application/xml" \
--H "X-API-Key: dev-key-123" \
--d '<?xml version="1.0"?><rental><bike_id>BIKE-101</bike_id><user_id>1</user_id></rental>'
-```
-
-* YAML:
-
-```bash
-curl -X POST http://localhost:8000/rentals/start \
--H "Content-Type: application/x-yaml" \
--H "Accept: application/x-yaml" \
--H "X-API-Key: dev-key-123" \
--d 'bike_id: BIKE-101
-user_id: 1'
-```
-
-**Stop rental**
-
-* JSON:
-
-```bash
-curl -X POST http://localhost:8000/rentals/stop \
--H "Content-Type: application/json" \
--H "Accept: application/json" \
--H "X-API-Key: dev-key-123" \
--d '{"rental_id": 15}'
-```
-
-* XML:
-
-```bash
-curl -X POST http://localhost:8000/rentals/stop \
--H "Content-Type: application/xml" \
--H "Accept: application/xml" \
--H "X-API-Key: dev-key-123" \
--d '<?xml version="1.0"?><rental><rental_id>16</rental_id></rental>'
-```
-
-* YAML:
-
-```bash
-curl -X POST http://localhost:8000/rentals/stop \
--H "Content-Type: application/x-yaml" \
--H "Accept: application/x-yaml" \
--H "X-API-Key: dev-key-123" \
--d 'rental_id: 15'
+git tag        # list all tags
+git show v1.0.0 # show commit for the tag
 ```
 
 ---
 
-## Demo Script (~2 Minutes)
-
-**1. List all books (JSON):**
+## 2️. Deploy Tag to Environment Branches
 
 ```bash
-curl -H "Accept: application/json" http://localhost:8000/books
+# Switch to dev branch
+git checkout dev
+
+# Merge or reset to the tag v1.0.0
+git merge v1.0.0    # merges changes from tag into dev
+
+# Push changes
+git push origin dev
 ```
 
-**2. Add a new book:**
+> Repeat similar steps for `staging` and `main` branches to promote the release.
+
+---
+
+## Rollback Example
+
+### Making the ROllback
+
+Here the Rollback was made in Production.
 
 ```bash
-curl -X POST http://localhost:8000/books \
--H "Content-Type: application/json" \
--d '{"title":"Dune","author":"Frank Herbert","stock":12}'
+git reset --hard v1.0.0  # Give version name to go back
+git push origin main --force
 ```
 
-**3. Update a book's stock:**
+> Rollback is usually only needed for production (`main`). Dev can continue with ongoing changes.
+
+---
+
+### Create a Hotfix Branch
 
 ```bash
-curl -X PUT http://localhost:8000/books/1 \
--H "Content-Type: application/json" \
--d '{"stock": 20}'
+# Create hotfix branch from the buggy tag
+git checkout -b hotfix/1.0.1 v1.0.1
+
+# Apply bug fix
+git add .
+git commit -m "Fix critical bug in v1.0.1"
 ```
 
-**4. Start a bike rental:**
+---
+
+### Merge Hotfix into Environment Branches
+
+Merge to Dev
 
 ```bash
-curl -X POST http://localhost:8000/rentals/start \
--H "Content-Type: application/json" \
--H "X-API-Key: dev-key-123" \
--d '{"bike_id": "BIKE-101","user_id": 1}'
+git checkout dev
+git merge hotfix/1.0.1
+git push origin dev
 ```
+---
 
-**5. Stop the bike rental:**
+Merge to Staging
 
 ```bash
-curl -X POST http://localhost:8000/rentals/stop \
--H "Content-Type: application/json" \
--H "X-API-Key: dev-key-123" \
--d '{"rental_id": 1}'
+git checkout staging
+git merge hotfix/1.0.1
+git push origin staging
 ```
+
+---
+
+Merge to Production (Main)
+
+```bash
+git checkout main
+git merge hotfix/1.0.1
+git push origin main
+```
+
+> Test hotfix in dev/staging before production deploy.
+
+---
+
+### Tag the Hotfix Release
+
+```bash
+# Create new tag for hotfix release
+git tag -a v1.0.2 -m "v1.0.2 hotfix release"
+git push origin v1.0.2
+```
+
+> Hotfixes should always get a new patch version, not reuse an old tag.
+
+---
+
+## Notes
+
+* Dev branch is the main development integration branch.
+* Use feature branches for multiple developers to avoid conflicts.
+* Rollback is usually needed only for production.
+* Always increment patch version for hotfixes (v1.0.1 → v1.0.2).
