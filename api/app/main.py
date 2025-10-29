@@ -241,7 +241,7 @@ async def start_rental(
     })
 
     accept = request.headers.get("Accept")
-    return render(
+    return render_rental(
         data={"rental_id": rental.id, "started_at": rental.started_at.isoformat()},
         accept=accept
     )
