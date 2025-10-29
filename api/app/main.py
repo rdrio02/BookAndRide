@@ -264,7 +264,7 @@ async def stop_rental(request: Request, db: Session = Depends(get_db), user=Depe
     data = parse_body(body, content_type, RENTAL_STOP_SCHEMA, schemas.RentalStopIn)
 
     print("Received rental start data:", json.dumps(data, indent=2))
-    print("This print is a feature of version 1.0.1")
+    print("This print is a feature of version 1.0.1 that has been fixed")
 
     r = db.get(models.Rental, data["rental_id"])
     if not r:
