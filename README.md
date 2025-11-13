@@ -61,7 +61,7 @@ git push origin dev
 
 ## Rollback Example
 
-### Making the ROllback
+### Making the Rollback
 
 Here the Rollback was made in Production.
 
@@ -132,15 +132,112 @@ git push origin v1.0.2
 
 ---
 
-## Notes
+# Git Rollback & Recovery
 
-* Dev branch is the main development integration branch.
-* Use feature branches for multiple developers to avoid conflicts.
-* Rollback is usually needed only for production.
-* Always increment patch version for hotfixes (v1.0.1 → v1.0.2).
+## 1. Undo Local Changes (Uncommitted)
 
+If you've modified a file but have not committed the changes, you can
+discard them:
 
+``` bash
+git restore app.py
+```
 
+### What this does
+
+-   Restores `app.py` to the version in the last commit (`HEAD`)
+-   Removes uncommitted changes
+-   Safe when you want to discard local edits completely
+
+------------------------------------------------------------------------
+
+## 2. Safely Revert a Bad Production Commit
+
+If a problematic commit has already been pushed, **do not use** `reset`
+or force-push.\
+Use `git revert` to create a new commit that undoes the bad one:
+
+``` bash
+git revert <bad_commit_hash>
+```
+
+### Why this is safe
+
+-   Public history is preserved
+-   No force-push required
+-   Revert commits are traceable and reversible
+-   Prevents issues for teammates pulling the branch
+
+------------------------------------------------------------------------
+
+## 3. Recover Lost Commits After a Hard Reset
+
+If you ran something destructive like:
+
+``` bash
+git reset --hard HEAD~3
+```
+
+and lost commits, they can usually be restored.
+
+### Step 1 --- Use `git reflog`
+
+``` bash
+git reflog
+```
+
+### What this does
+
+Shows all previous positions of `HEAD`, including commits hidden by
+resets.
+
+Example:
+
+    a1b2c3d HEAD@{0}: reset: moving to HEAD~3
+    d4e5f6g HEAD@{1}: commit: Add payment logic
+    h7i8j9k HEAD@{2}: commit: Add logging
+
+Find the commit you want to bring back (e.g., `d4e5f6g`).
+
+------------------------------------------------------------------------
+
+### Step 2 --- Reset to the located commit
+
+``` bash
+git reset --hard d4e5f6g
+```
+
+### What this does
+
+-   Moves your branch pointer back to the recovered commit\
+-   Restores files to the commit's state
+
+------------------------------------------------------------------------
+
+## Summary
+
+  -----------------------------------------------------------------------
+  Goal               Command                     Result
+  ------------------ --------------------------- ------------------------
+  Undo uncommitted   `git restore file`          Reverts local file to
+  changes                                        last commit
+
+  Undo a bad pushed  `git revert <hash>`         Creates a safe inverse
+  commit                                         commit
+
+  Find "lost"        `git reflog`                Shows full `HEAD`
+  commits                                        history
+
+  Restore missing    `git reset --hard <hash>`   Recovers commit and
+  commit                                         working tree
+  -----------------------------------------------------------------------
+
+------------------------------------------------------------------------
+
+# Observation and Logging
+
+Example of how to add an log into the ElasticSearch
+```bash
 curl -k -u elastic:'VC5-ezWHTaquc9p5p6AF' -X POST \
 "http://localhost:9200/bookride-logs/_doc?refresh=true" \
 -H 'Content-Type: application/json' -d '{
@@ -153,5 +250,4 @@ curl -k -u elastic:'VC5-ezWHTaquc9p5p6AF' -X POST \
   "status_code": 200,
   "message": "Ride successfully booked"
 }'
-
-curl http://localhost:9200/bookride-logs/_search?pretty
+```

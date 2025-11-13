@@ -29,3 +29,7 @@
 ## v2.0.0
 
 * New API Simulation
+
+## v2.0.1
+
+* Rollback strategies
