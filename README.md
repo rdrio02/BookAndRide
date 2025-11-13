@@ -138,3 +138,20 @@ git push origin v1.0.2
 * Use feature branches for multiple developers to avoid conflicts.
 * Rollback is usually needed only for production.
 * Always increment patch version for hotfixes (v1.0.1 → v1.0.2).
+
+
+
+curl -k -u elastic:'VC5-ezWHTaquc9p5p6AF' -X POST \
+"http://localhost:9200/bookride-logs/_doc?refresh=true" \
+-H 'Content-Type: application/json' -d '{
+  "service": "bookride-api",
+  "level": "INFO",
+  "@timestamp": "2025-11-12T10:45:00Z",
+  "user_id": "U12345",
+  "action": "Book Ride",
+  "response_time_ms": 230,
+  "status_code": 200,
+  "message": "Ride successfully booked"
+}'
+
+curl http://localhost:9200/bookride-logs/_search?pretty
