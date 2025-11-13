@@ -1,0 +1,14 @@
+dev:
+  DB_URL: "postgresql://ai_user:ai_pass@localhost:5432/food_dev"
+  API_KEY: "dev-xyz123"
+  DEBUG: true
+
+staging:
+  DB_URL: "postgresql://ai_user:ai_pass@staging-server:5432/food_staging"
+  API_KEY: "staging-xyz456"
+  DEBUG: true
+
+prod:
+  DB_URL: "postgresql://ai_user:secure_pass@prod-server:5432/food_prod"
+  API_KEY: "prod-secure789"
+  DEBUG: false
