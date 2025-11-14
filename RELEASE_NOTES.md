@@ -17,9 +17,19 @@
 * Includes bug fix in rental API.
 * Merged hotfix into dev, staging, and main (production).
 * Tagged as `v1.0.2` for deployment reference.
-* 
+
 ## v1.0.3
 
-* Removing unrelated documents
-* Adding the Release_Notes.md file
-* Updating README.md
+* Adding the RELEASE_NOTES
+
+## v1.1.0
+
+* Addition of Management Configuration Management
+
+## v2.0.0
+
+* New API Simulation
+
+## v2.0.1
+
+* Rollback strategies
