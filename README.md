@@ -212,28 +212,6 @@ git reset --hard d4e5f6g
 -   Moves your branch pointer back to the recovered commit\
 -   Restores files to the commit's state
 
-------------------------------------------------------------------------
-
-## Summary
-
-  -----------------------------------------------------------------------
-  Goal               Command                     Result
-  ------------------ --------------------------- ------------------------
-  Undo uncommitted   `git restore file`          Reverts local file to
-  changes                                        last commit
-
-  Undo a bad pushed  `git revert <hash>`         Creates a safe inverse
-  commit                                         commit
-
-  Find "lost"        `git reflog`                Shows full `HEAD`
-  commits                                        history
-
-  Restore missing    `git reset --hard <hash>`   Recovers commit and
-  commit                                         working tree
-  -----------------------------------------------------------------------
-
-------------------------------------------------------------------------
-
 # Observation and Logging
 
 Example of how to add an log into the ElasticSearch
