@@ -7,5 +7,5 @@ def main():
     print(f"Connecting to DB: {cfg['DB_URL']}") 
     print(f"Using API key: {cfg['API_KEY'][:4]}... (masked)") 
 
-if name == "main": 
+if __name__ == "__main__": 
     main()

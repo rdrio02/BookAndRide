@@ -15,7 +15,7 @@ def load_config():
  
     return config 
  
-if name == "main": 
+if __name__ == "__main__": 
     cfg = load_config() 
     print("Loaded environment:", os.getenv("APP_ENV", "dev")) 
     print("DB_URL =", cfg["DB_URL"]) 
