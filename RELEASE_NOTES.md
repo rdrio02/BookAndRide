@@ -33,3 +33,9 @@
 ## v2.0.1
 
 * Rollback strategies
+
+## v2.0.4
+
+* Python Packages Integration
+* Logging with Python
+

@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bookandride-api"
+version = "2.0.4"
+description = "Book & Ride Microservice API"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Rdrio" }]
+
+dependencies = [
+  "fastapi>=0.112",
+  "uvicorn[standard]>=0.30",
+  "sqlalchemy>=2.0",
+  "psycopg[binary]>=3.2",
+  "pydantic>=2.7",
+  "alembic>=1.13",
+  "prometheus-client>=0.20",
+  "elasticsearch==8.15.1",
+  "xmltodict>=0.13.0",
+  "jsonschema"
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "httpx"]
+
+[tool.setuptools.package-dir]
+"" = "api/src"
+
+[tool.setuptools.packages.find]
+where = ["api/src"]
+
+[tool.setuptools.package-data]
+"bookandride_api" = ["schemas/*.json"]

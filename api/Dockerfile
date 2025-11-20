@@ -1,20 +1,23 @@
+# Dockerfile (inside api/)
 FROM python:3.12-slim
-
-# System deps for psycopg
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential libpq-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Install Python deps
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy project metadata & top-level files
+COPY ../pyproject.toml ../README.md ../RELEASE_NOTES.md ./
+COPY ../app.py ../config.yaml ../config_loader.py ./
 
-# Copy app code
-COPY app ./app
+# Copy source code preserving path expected by setuptools
+COPY ../api/src ./api/src
 
-# Expose port (optional)
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Install the package
+RUN pip install --no-cache-dir .
+
+# Expose port
 EXPOSE 8080
 
-# Start FastAPI
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Run the app
+CMD ["uvicorn", "bookandride_api.main:app", "--host", "0.0.0.0", "--port", "8080"]
