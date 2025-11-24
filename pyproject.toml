@@ -20,8 +20,15 @@ dependencies = [
   "prometheus-client>=0.20",
   "elasticsearch==8.15.1",
   "xmltodict>=0.13.0",
-  "jsonschema"
+  "jsonschema",
+  "python-jose[cryptography]>=3.3",
+  "passlib[bcrypt]>=1.7",
+  "python-multipart>=0.0.9",
+  "pydantic[email]",
+  "bcrypt == 4.0.1",
+  "pytest"
 ]
+
 
 [project.optional-dependencies]
 dev = ["pytest", "httpx"]

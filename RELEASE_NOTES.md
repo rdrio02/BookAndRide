@@ -39,3 +39,6 @@
 * Python Packages Integration
 * Logging with Python
 
+## v2.0.5
+
+* Adding JWT to secure endpoints

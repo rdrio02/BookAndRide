@@ -12,7 +12,7 @@ from pathlib import Path
 import json
 import xmltodict
 
-from .auth import verify_api_key  
+from .auth import verify_api_key, hash_password,verify_password, create_access_token, get_current_user, api_key_or_jwt
 from .database import engine, Base, get_db
 from . import models, schemas
 from .search import index_book, search_books, index_rental
@@ -23,6 +23,60 @@ from .logging_config import logger
 # App setup
 # ─────────────────────────────────────────────
 app = FastAPI(title="Book&Ride API", version="0.2.0")
+
+# ─────────────────────────────────────────────
+# Auth
+# ─────────────────────────────────────────────
+
+@app.post("/register", status_code=status.HTTP_201_CREATED)
+def register(payload: schemas.RegisterIn, db: Session = Depends(get_db)):
+    exists = db.execute(
+        select(models.User).where(models.User.email == payload.email)
+    ).scalar_one_or_none()
+
+    if exists:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Email already registered",
+        )
+
+    user = models.User(
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return {"id": user.id, "email": user.email}
+
+
+@app.post("/login", response_model=schemas.TokenOut)
+def login(payload: schemas.LoginIn, db: Session = Depends(get_db)):
+    user = db.execute(
+        select(models.User).where(models.User.email == payload.email)
+    ).scalar_one_or_none()
+
+    if not user or not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid credentials")
+
+    token = create_access_token(
+        user_id=user.id,
+        email=user.email,
+        role=user.role,
+    )
+
+    return {"access_token": token, "token_type": "bearer"}
+
+
+@app.get("/me", response_model=schemas.MeOut)
+def me(current=Depends(get_current_user)):
+    return {
+        "id": current.id,
+        "email": current.email,
+        "role": current.role,
+    }
 
 # ─────────────────────────────────────────────
 # Metrics
@@ -68,7 +122,12 @@ RENTAL_STOP_SCHEMA = json.load(open(Path(__file__).parent / "schemas" / "rental.
 # ─────────────────────────────────────────────
 
 @app.get("/books", response_model=None)
-def list_books(request: Request, db: Session = Depends(get_db), q: str | None = Query(default=None)):
+def list_books(
+    request: Request,
+    db: Session = Depends(get_db),
+    q: str | None = Query(default=None),
+    _user=Depends(api_key_or_jwt)  # PROTECT WITH JWT and API-Keys
+):
     if q:
         results = search_books(q)
     else:
@@ -78,6 +137,7 @@ def list_books(request: Request, db: Session = Depends(get_db), q: str | None = 
     books_data = [schemas.BookOut.model_validate(b).model_dump() for b in results]
     accept = negotiate(request.headers.get("Accept"))
     return render_book(books_data, accept)
+
 
 
 @app.get("/books/{book_id}", response_model=None)
@@ -212,7 +272,6 @@ async def start_rental(
     content_type = request.headers.get("Content-Type", "").split(";")[0]
     body = await request.body()
 
-    # Parse XML or JSON
     data = parse_body(body, content_type, RENTAL_START_SCHEMA, schemas.RentalStartIn)
 
     logger.info(f"Received rental start data: {data}")
@@ -251,10 +310,6 @@ async def start_rental(
         data={"rental_id": rental.id, "started_at": rental.started_at.isoformat()},
         accept=accept
     )
-
-
-
-
 
 def _to_aware_utc(dt: datetime) -> datetime:
     if dt is None:

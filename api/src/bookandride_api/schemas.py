@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime
 
 class BookBase(BaseModel):
@@ -38,3 +38,20 @@ class RentalStopIn(BaseModel):
 class RentalStopOut(BaseModel):
     duration_min: int
     price_eur: float
+
+class RegisterIn(BaseModel):
+    email: EmailStr
+    password: str
+
+class LoginIn(BaseModel):
+    email: EmailStr
+    password: str
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+class MeOut(BaseModel):
+    id: int
+    email: EmailStr
+    role: str
