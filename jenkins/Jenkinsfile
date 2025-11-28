@@ -1,0 +1,51 @@
+pipeline { 
+    agent any 
+ 
+    stages { 
+ 
+        stage('Checkout Book & Ride Code') { 
+            steps { 
+                git branch: 'main', url: 'https://github.com/<yourusername>/bookandride.git' 
+            } 
+        } 
+ 
+        stage('Install Dependencies') { 
+            steps { 
+                sh ''' 
+                python3 -m venv venv 
+                . venv/bin/activate 
+                pip install --upgrade pip 
+                pip install -r requirements.txt 
+                ''' 
+            } 
+        } 
+ 
+        stage('Run Book & Ride Tests') { 
+            steps { 
+                sh ''' 
+                . venv/bin/activate 
+                pytest -q 
+                ''' 
+            } 
+        } 
+ 
+        stage('Build Package (sdist + wheel)') { 
+            steps { 
+                sh ''' 
+                . venv/bin/activate 
+                pip install build 
+                python -m build 
+                ''' 
+            } 
+        } 
+
+    } 
+    post { 
+        success { 
+            echo 'Book & Ride CI pipeline completed successfully!' 
+        } 
+        failure { 
+            echo 'Book & Ride CI pipeline failed.' 
+        } 
+    } 
+} 
