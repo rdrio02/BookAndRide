@@ -2,15 +2,17 @@
 # File: app/main.py
 # ─────────────────────────────────────────────────────────────────────────────
 from __future__ import annotations
-from fastapi import FastAPI, Request, Depends, HTTPException, Query, status, Header
+from fastapi import FastAPI, Request, Depends, HTTPException, Query, status, Header, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response, JSONResponse
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST, REGISTRY
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from datetime import datetime, timezone
 from pathlib import Path
 import json
 import xmltodict
+import time
+import asyncio
 
 from .auth import verify_api_key, hash_password,verify_password, create_access_token, get_current_user, api_key_or_jwt
 from .database import engine, Base, get_db
@@ -81,16 +83,55 @@ def me(current=Depends(get_current_user)):
 # ─────────────────────────────────────────────
 # Metrics
 # ─────────────────────────────────────────────
-REQUEST_COUNT = Counter("http_requests_total", "Total HTTP requests", ["method", "path", "status"])
-REQUEST_LATENCY = Histogram("http_request_duration_seconds", "Request latency (seconds)", ["path"])
+
+REQUEST_COUNT = Counter(
+    "http_requests_total",
+    "Total HTTP requests",
+    ["method", "path", "status"]
+)
+
+REQUEST_LATENCY = Histogram(
+    "http_request_duration_seconds",
+    "Request latency (seconds)",
+    ["path"]
+)
+
+ACTIVE_RENTALS = Gauge(
+    "bookandride_active_rentals",
+    "Number of active bike rentals"
+)
+
+RENTAL_PRICE_EUR = Histogram(
+    "bookandride_rental_price_eur",
+    "Rental price distribution",
+    buckets=[2, 4, 6, 8, 10, 12]
+)
+
 
 @app.middleware("http")
 async def metrics_middleware(request: Request, call_next):
-    path = request.url.path
-    with REQUEST_LATENCY.labels(path).time():
-        response = await call_next(request)
-    REQUEST_COUNT.labels(request.method, path, str(response.status_code)).inc()
+    # Exclude /metrics itself
+    if request.url.path == "/metrics":
+        return await call_next(request)
+
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed = time.perf_counter() - start
+
+    # Use path template to avoid high-cardinality metrics
+    route = request.scope.get("route")
+    path = route.path if route else request.url.path
+
+    REQUEST_COUNT.labels(
+        method=request.method,
+        path=path,
+        status=str(response.status_code)
+    ).inc()
+
+    REQUEST_LATENCY.labels(path=path).observe(elapsed)
+
     return response
+
 
 @app.get("/metrics")
 def metrics():
@@ -273,6 +314,9 @@ async def start_rental(
     body = await request.body()
 
     data = parse_body(body, content_type, RENTAL_START_SCHEMA, schemas.RentalStartIn)
+    
+    # Adding Metrics
+    ACTIVE_RENTALS.inc() 
 
     logger.info(f"Received rental start data: {data}")
 
@@ -339,13 +383,17 @@ async def stop_rental(request: Request, db: Session = Depends(get_db), user=Depe
     now = datetime.now(timezone.utc)
     start = _to_aware_utc(r.started_at)
     minutes = max(0, int((now - start).total_seconds() // 60))
-    price = calculate_price(minutes)
+    price = calculate_price(minutes) 
 
     r.stopped_at = now
     r.total_minutes = minutes
     r.price_eur = price
     db.commit()
     db.refresh(r)
+
+    # Metrics
+    ACTIVE_RENTALS.dec() 
+    RENTAL_PRICE_EUR.observe(price)
 
     logger.info(f"Rental stopped (rental_id={r.id}, minutes={minutes}, price={price})")
 
@@ -361,3 +409,23 @@ async def stop_rental(request: Request, db: Session = Depends(get_db), user=Depe
 
     accept = request.headers.get("Accept")
     return render_rental({"duration_min": minutes, "price_eur": price}, accept)
+
+
+# ─────────────────────────────────────────────
+# Websocket endpoints
+# ─────────────────────────────────────────────
+
+@app.websocket("/ws/metrics")
+async def websocket_metrics(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            active_rentals = int(ACTIVE_RENTALS._value.get())
+            message = {"active_rentals": active_rentals}
+            await websocket.send_json(message)
+            await asyncio.sleep(2)
+    except WebSocketDisconnect:
+        print("Client disconnected")
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+        await websocket.close()
