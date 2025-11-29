@@ -19,7 +19,7 @@ pipeline {
                 pip install build
 
                 # Install package + dependencies defined in pyproject.toml
-                pip install .
+                pip install ".[dev]"
                 ''' 
             } 
         } 
