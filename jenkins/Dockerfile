@@ -23,6 +23,11 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
  && chmod +x kubectl \
  && mv kubectl /usr/local/bin/
 
+# Copy plugins.txt
+COPY plugins.txt /usr/share/jenkins/ref/plugins.txt
+
+# Use jenkins-plugin-cli instead
+RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
 RUN mkdir -p /var/jenkins_home/.ssh && \
     ssh-keyscan -t ed25519 github.com >> /var/jenkins_home/.ssh/known_hosts
