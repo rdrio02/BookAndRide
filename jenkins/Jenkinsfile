@@ -1,55 +1,82 @@
-pipeline { 
-    agent any 
- 
-    stages { 
- 
-        stage('Checkout Book & Ride Code') { 
-            steps { 
-                git branch: 'dev', url: 'https://github.com/rdrio02/BookAndRide.git' 
-            } 
-        } 
- 
-        stage('Install Dependencies') { 
-            steps { 
-                sh ''' 
+def notifyDiscord(message) {
+    sh """
+    curl -H "Content-Type: application/json" \
+         -X POST \
+         -d '{"content": "${message}"}' \
+         https://discordapp.com/api/webhooks/1445835867791949925/xOK2a8trVdDJwSqd5JKeS2rY54-xpYqjdO0hSPq2RVo2NJs564in_ApBqQoyV6xeb0sP
+    """
+}
+
+
+pipeline {
+    agent any
+
+    environment {
+        DISCORD_WEBHOOK = credentials('DISCORD_WEBHOOK')
+    }
+
+    stages {
+
+        stage('Checkout Code') {
+            steps {
+                script { notifyDiscord(":arrow_down: Checking out Book & Ride code...") }
+                git branch: 'dev', url: 'https://github.com/rdrio02/BookAndRide.git'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                script { notifyDiscord(":package: Installing dependencies...") }
+                sh '''
                 python3 -m venv venv
                 . venv/bin/activate
-
                 pip install --upgrade pip
                 pip install build
-
-                # Install package + dependencies defined in pyproject.toml
                 pip install ".[dev]"
-                ''' 
-            } 
-        } 
- 
-        stage('Run Book & Ride Tests') { 
-            steps { 
-                sh ''' 
-                . venv/bin/activate 
-                pytest -q 
-                ''' 
-            } 
-        } 
- 
-        stage('Build Package (sdist + wheel)') { 
-            steps { 
-                sh ''' 
-                . venv/bin/activate 
-                pip install build 
-                python -m build 
-                ''' 
-            } 
-        } 
+                '''
+            }
+        }
 
-    } 
-    post { 
-        success { 
-            echo 'Book & Ride CI pipeline completed successfully!' 
-        } 
-        failure { 
-            echo 'Book & Ride CI pipeline failed.' 
-        } 
-    } 
-} 
+        stage('Run Tests') {
+            steps {
+                script { notifyDiscord(":test_tube: Running tests...") }
+                sh '''
+                . venv/bin/activate
+                pytest -q
+                '''
+                script { notifyDiscord(":white_check_mark: Tests passed!") }
+            }
+        }
+
+        stage('Build Package') {
+            steps {
+                script { notifyDiscord(":gear: Building Python package...") }
+                sh '''
+                . venv/bin/activate
+                python -m build
+                '''
+            }
+        }
+
+        stage('Deploy with Docker Compose') {
+            steps {
+                script { notifyDiscord(":whale: Starting Docker Compose deployment...") }
+                sh '''
+                docker compose build
+                docker compose down
+                docker compose up -d
+                '''
+                script { notifyDiscord(":rocket: Docker deployment completed!") }
+            }
+        }
+    }
+
+    post {
+        success {
+            script { notifyDiscord(":tada: CI/CD pipeline finished successfully!") }
+        }
+        failure {
+            script { notifyDiscord(":x: CI/CD pipeline FAILED! Check Jenkins logs.") }
+        }
+    }
+}
