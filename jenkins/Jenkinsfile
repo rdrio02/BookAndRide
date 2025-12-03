@@ -3,7 +3,7 @@ def notifyDiscord(message) {
     curl -H "Content-Type: application/json" \
          -X POST \
          -d '{"content": "${message}"}' \
-         https://discordapp.com/api/webhooks/1445835867791949925/xOK2a8trVdDJwSqd5JKeS2rY54-xpYqjdO0hSPq2RVo2NJs564in_ApBqQoyV6xeb0sP
+         $DISCORD_WEBHOOK
     """
 }
 
