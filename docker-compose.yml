@@ -79,6 +79,8 @@ services:
         - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       depends_on:
         - api
+      command:
+        - "--config.file=/etc/prometheus/prometheus.yml"
 
   grafana:
     image: grafana/grafana:latest
@@ -87,13 +89,12 @@ services:
       - "3000:3000"
     volumes:
     - grafana_data:/var/lib/grafana
+    - ./monitoring/provisioning:/etc/grafana/provisioning
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - prometheus
-
-
 
 volumes:
   dbdata:

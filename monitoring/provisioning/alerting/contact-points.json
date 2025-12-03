@@ -1,0 +1,19 @@
+{
+  "apiVersion": 1,
+  "contactPoints": [
+    {
+      "orgId": 1,
+      "name": "API",
+      "receivers": [
+        {
+          "uid": "ff5s42m5p8yyoe",
+          "type": "webhook",
+          "settings": {
+            "url": "http://api:8080/alerts"
+          },
+          "disableResolveMessage": false
+        }
+      ]
+    }
+  ]
+}

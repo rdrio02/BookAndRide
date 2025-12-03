@@ -13,6 +13,8 @@ import json
 import xmltodict
 import time
 import asyncio
+import os
+import httpx
 
 from .auth import verify_api_key, hash_password,verify_password, create_access_token, get_current_user, api_key_or_jwt
 from .database import engine, Base, get_db
@@ -25,6 +27,74 @@ from .logging_config import logger
 # App setup
 # ─────────────────────────────────────────────
 app = FastAPI(title="Book&Ride API", version="0.2.0")
+
+# ─────────────────────────────────────────────
+# Alerts
+# ─────────────────────────────────────────────
+
+import os
+from datetime import datetime
+import httpx
+from fastapi import FastAPI, Request
+
+app = FastAPI()
+
+TEAMS_URL = os.getenv("TEAMS_WEBHOOK_URL")
+DISCORD_URL = "https://discordapp.com/api/webhooks/1329181887238901790/oZeNrxbL7-78JS5OssCkTKRundncXzRQWaKRdgnvNwJl6dNBiLjv8A1FtOqBc8PAKj_Q"
+
+def format_alert_message(alert):
+    status = alert.get("status", "unknown").upper()
+    labels = alert.get("labels", {})
+    alert_name = labels.get("alertname", "No alert name")
+    folder = labels.get("grafana_folder", "No folder")
+    starts_at = alert.get("startsAt")
+    generator_url = alert.get("generatorURL", "")
+    value_string = alert.get("valueString", "")
+    silence_url = alert.get("silenceURL", "")
+
+    # Convert timestamp to readable format
+    try:
+        start_time = datetime.fromisoformat(starts_at.replace("Z", "+00:00")).strftime("%Y-%m-%d %H:%M:%S UTC")
+    except:
+        start_time = starts_at
+
+    message_text = (
+        f"**Alert:** {alert_name}\n"
+        f"**Status:** {status}\n"
+        f"**Started at:** {start_time}\n"
+        f"**Values:** {value_string}\n\n"
+        f"**Links:**\n"
+        f"[View Alert]({generator_url})\n"
+        f"[Silence Alert]({silence_url})"
+    )
+
+    return message_text
+
+async def send_to_teams(alert):
+    message_text = format_alert_message(alert)
+    message = {
+        "title": "Grafana Alert",
+        "text": message_text
+    }
+    async with httpx.AsyncClient() as client:
+        await client.post(TEAMS_URL, json=message)
+
+async def send_to_discord(alert):
+    message_text = format_alert_message(alert)
+    message = {"content": message_text}
+    async with httpx.AsyncClient() as client:
+        await client.post(DISCORD_URL, json=message)
+
+@app.post("/alerts")
+async def receive_alert(request: Request):
+    payload = await request.json()
+    for alert in payload.get("alerts", []):
+        print("🔔 Received alert:", alert)
+        #if TEAMS_URL:
+        #    await send_to_teams(alert)
+        if DISCORD_URL:
+            await send_to_discord(alert)
+    return {"status": "ok"}
 
 # ─────────────────────────────────────────────
 # Auth
