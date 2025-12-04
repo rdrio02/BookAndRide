@@ -61,12 +61,7 @@ pipeline {
         stage('Deploy with Docker Compose') {
             steps {
                 script { notifyDiscord(":whale: Starting Docker Compose deployment...") }
-                sh '''
-                cd "$WORKSPACE"
-                docker compose build
-                docker compose down
-                docker compose up -d
-                '''
+                sh './deploy.sh'
                 script { notifyDiscord(":rocket: Docker deployment completed!") }
             }
         }
