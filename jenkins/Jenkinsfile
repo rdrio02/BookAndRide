@@ -1,11 +1,14 @@
 def notifyDiscord(message) {
-    sh """
-    curl -H "Content-Type: application/json" \
-         -X POST \
-         -d '{"content": "${message}"}' \
-         $DISCORD_WEBHOOK
-    """
+    withCredentials([string(credentialsId: 'DISCORD_WEBHOOK', variable: 'WEBHOOK')]) {
+        sh(script: """
+            curl -H "Content-Type: application/json" \
+                 -X POST \
+                 -d '{\"content\": \"${message}\"}' \
+                 "$WEBHOOK"
+        """)
+    }
 }
+
 
 
 pipeline {
