@@ -219,6 +219,10 @@ Base.metadata.create_all(bind=engine)
 def health():
     return {"status": "ok", "version": app.version}
 
+@app.get("/healthstatus")
+def health():
+    return {"status": "ok", "version": app.version}
+
 # ─────────────────────────────────────────────
 # Load JSON Schema for validation
 # ─────────────────────────────────────────────
