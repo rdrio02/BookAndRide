@@ -70,7 +70,17 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  
+  prometheus:
+      image: prom/prometheus:latest
+      container_name: prometheus
+      ports:
+        - "9090:9090"
+      volumes:
+        - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      depends_on:
+        - api
+      command:
+        - "--config.file=/etc/prometheus/prometheus.yml"
 
   grafana:
     image: grafana/grafana:latest
@@ -83,7 +93,8 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
-    
+    depends_on:
+      - prometheus
 
 volumes:
   dbdata:
