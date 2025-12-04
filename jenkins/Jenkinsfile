@@ -58,23 +58,11 @@ pipeline {
             }
         }
 
-        stage('Debug Workspace') {
-            steps {
-                sh '''
-                echo "--- WORKSPACE CONTENTS ---"
-                pwd
-                ls -R .
-                echo "--- Check prometheus.yml ---"
-                ls -l ./prometheus/prometheus.yml || echo "FILE NOT FOUND"
-                '''
-            }
-        }
-
-
         stage('Deploy with Docker Compose') {
             steps {
                 script { notifyDiscord(":whale: Starting Docker Compose deployment...") }
                 sh '''
+                cd "$WORKSPACE"
                 docker compose build
                 docker compose down
                 docker compose up -d
