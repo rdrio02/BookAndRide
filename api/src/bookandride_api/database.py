@@ -20,7 +20,6 @@ class Base(DeclarativeBase):
 # Dependency for FastAPI routes
 from typing import Generator
 
-
 def get_db() -> Generator:
      db = SessionLocal()
      try:
