@@ -9,8 +9,6 @@ def notifyDiscord(message) {
     }
 }
 
-
-
 pipeline {
     agent any
 
@@ -19,6 +17,29 @@ pipeline {
     }
 
     stages {
+        
+        stage('Check for new version') {
+            steps {
+                script {
+
+                    def remoteHash = sh(
+                        script: "git ls-remote https://github.com/rdrio02/BookAndRide.git refs/heads/dev | cut -f1",
+                        returnStdout: true
+                    ).trim()
+
+                    def previousHashFile = '.last_commit'
+                    def previousHash = fileExists(previousHashFile) ? readFile(previousHashFile).trim() : ''
+
+                    if (remoteHash == previousHash) {
+                        currentBuild.result = 'NOT_BUILT'
+                        error("No new version")   // stop pipeline
+                    } else {
+                        writeFile file: previousHashFile, text: remoteHash
+                    }
+                }
+            }
+        }
+
 
         stage('Checkout Code') {
             steps {
