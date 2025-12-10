@@ -121,3 +121,4 @@ def api_key_or_jwt(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "User not found")
 
     return {"user_id": user.id, "role": user.role}
+ 
