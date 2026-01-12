@@ -5,13 +5,16 @@ USER root
 # Create docker group with GID 989 and add jenkins user to it
 RUN groupadd -for -g 989 docker && usermod -aG docker jenkins
 
-# Install dependencies (python3, pip, docker.io), clean up afterwards
+# Install dependencies
 RUN apt-get update && \
-    apt-get install -y python3 python3-pip python3-venv docker.io && \
+    apt-get install -y python3 python3-pip python3-venv docker.io ssh curl && \
     ln -sf /usr/bin/python3 /usr/bin/python && \
     ln -sf /usr/bin/pip3 /usr/bin/pip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# Install Ansible
+RUN pip install --no-cache-dir ansible
 
 # Install Docker Compose CLI plugin
 RUN mkdir -p /usr/local/lib/docker/cli-plugins && \

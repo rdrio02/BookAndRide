@@ -82,11 +82,13 @@ pipeline {
             }
         }
 
-        stage('Deploy with Docker Compose') {
+        stage('Deploy with Ansible') {
             steps {
-                script { notifyDiscord(":whale: Starting Docker Compose deployment...") }
-                sh './deploy.sh'
-                script { notifyDiscord(":rocket: Docker deployment completed!") }
+                script { notifyDiscord(":whale: Deploying with Ansible...") }
+                sh '''
+                ansible-playbook ansible/playbook.yml
+                '''
+                script { notifyDiscord(":rocket: Ansible deployment completed!") }
             }
         }
     }
