@@ -15,7 +15,7 @@ class Book(Base):
 class Rental(Base):
     __tablename__ = "rentals"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    user_id: Mapped[int] = mapped_column(Integer, nullable=False)  # simple int user id
+    user_id: Mapped[int] = mapped_column(Integer, nullable=False)
     bike_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     stopped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
